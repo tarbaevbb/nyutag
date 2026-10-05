@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/sesen}
+    username: ${SPRING_DATASOURCE_USERNAME:sesen}
+    password: ${SPRING_DATASOURCE_PASSWORD:sesen}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+
+server:
+  port: 8080
+
+sesen:
+  xp:
+    correct-answer: 10
+  lessons:
+    completion-reward: 20
+  course-code: BURYAT_A1
+  auth-max-age-seconds: 86400
+  dev-auth:
+    enabled: ${SESEN_DEV_AUTH_ENABLED:false}
+    telegram-id: ${SESEN_DEV_TELEGRAM_ID:1}
+  telegram:
+    bot-token: ${SESEN_TELEGRAM_BOT_TOKEN:}
+  cors:
+    allowed-origins: ${SESEN_CORS_ORIGINS:http://localhost:5173}

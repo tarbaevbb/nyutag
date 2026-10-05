@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="ru.sesen.service.StreakServiceTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-05T21:02:50.998Z" hostname="Mac.lan" time="0.043">
+  <properties/>
+  <testcase name="updateStreak_sameDay_noIncrement()" classname="ru.sesen.service.StreakServiceTest" time="0.035"/>
+  <testcase name="updateStreak_firstActivity()" classname="ru.sesen.service.StreakServiceTest" time="0.001"/>
+  <testcase name="updateStreak_multipleLessonsSameDay()" classname="ru.sesen.service.StreakServiceTest" time="0.001"/>
+  <testcase name="updateStreak_yesterday_increment()" classname="ru.sesen.service.StreakServiceTest" time="0.002"/>
+  <testcase name="updateStreak_gapReset()" classname="ru.sesen.service.StreakServiceTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
