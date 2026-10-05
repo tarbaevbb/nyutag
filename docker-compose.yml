@@ -19,9 +19,10 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/nyutag
       SPRING_DATASOURCE_USERNAME: nyutag
       SPRING_DATASOURCE_PASSWORD: nyutag
-      SESEN_TELEGRAM_BOT_TOKEN: ${SESEN_TELEGRAM_BOT_TOKEN:-}
-      SESEN_DEV_AUTH_ENABLED: "false"
-      SESEN_CORS_ORIGINS: "http://localhost:5173"
+      NYUTAG_TELEGRAM_BOT_TOKEN: ${NYUTAG_TELEGRAM_BOT_TOKEN:-}
+      NYUTAG_DEV_AUTH_ENABLED: "true"
+      NYUTAG_DEV_TELEGRAM_ID: "1"
+      NYUTAG_CORS_ORIGINS: "http://localhost:5173"
     ports: ["8080:8080"]
     depends_on:
       postgres:

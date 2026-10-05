@@ -32,6 +32,12 @@ public class TelegramAuthFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
         try {
+            String path = httpRequest.getRequestURI();
+            if (path.equals("/api/health")) {
+                filterChain.doFilter(httpRequest, httpResponse);
+                return;
+            }
+
             String initData = httpRequest.getHeader("X-Telegram-Init-Data");
             User user;
 

@@ -71,10 +71,10 @@ public class TelegramAuthService {
 
         return Map.of(
                 "id", user.getId(),
-                "firstName", user.getFirstName(),
-                "lastName", user.getLastName(),
-                "username", user.getUsername(),
-                "avatarUrl", user.getAvatarUrl(),
+                "firstName", user.getFirstName() != null ? user.getFirstName() : "",
+                "lastName", user.getLastName() != null ? user.getLastName() : "",
+                "username", user.getUsername() != null ? user.getUsername() : "",
+                "avatarUrl", user.getAvatarUrl() != null ? user.getAvatarUrl() : "",
                 "level", user.getLevel(),
                 "xp", user.getXp(),
                 "streak", user.getStreak(),

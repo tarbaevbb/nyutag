@@ -25,9 +25,9 @@ nyutag:
   course-code: BURYAT_A1
   auth-max-age-seconds: 86400
   dev-auth:
-    enabled: ${SESEN_DEV_AUTH_ENABLED:false}
-    telegram-id: ${SESEN_DEV_TELEGRAM_ID:1}
+    enabled: ${NYUTAG_DEV_AUTH_ENABLED:false}
+    telegram-id: ${NYUTAG_DEV_TELEGRAM_ID:1}
   telegram:
-    bot-token: ${SESEN_TELEGRAM_BOT_TOKEN:}
+    bot-token: ${NYUTAG_TELEGRAM_BOT_TOKEN:}
   cors:
-    allowed-origins: ${SESEN_CORS_ORIGINS:http://localhost:5173}
+    allowed-origins: ${NYUTAG_CORS_ORIGINS:http://localhost:5173}
