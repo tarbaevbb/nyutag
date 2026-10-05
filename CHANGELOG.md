@@ -13,7 +13,7 @@
 - 6 сервисов: `UserService`, `LessonService`, `ProgressService`, `QuizService`, `StreakService`, `TelegramAuthService`
 - API endpoints: `/api/health`, `/api/me`, `/api/lessons`, `/api/lessons/{id}`, `/api/lessons/{id}/start`, `/api/lessons/{lessonId}/items/{itemId}/answer`, `/api/lessons/{id}/complete`, `/api/progress`, `/api/stats`
 - GlobalExceptionHandler с кодированием ошибок
-- SesenProperties для конфигурации XP, dev-auth, CORS
+- NyutagProperties для конфигурации XP, dev-auth, CORS
 - Seed контент: 1 курс A1, 12 уроков, ~60 items (все `needs_review = true`)
 - Unit-тесты: `StreakServiceTest`, `QuizServiceTest`
 

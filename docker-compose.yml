@@ -2,13 +2,13 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: sesen
-      POSTGRES_USER: sesen
-      POSTGRES_PASSWORD: sesen
+      POSTGRES_DB: nyutag
+      POSTGRES_USER: nyutag
+      POSTGRES_PASSWORD: nyutag
     ports: ["5432:5432"]
     volumes: ["postgres_data:/var/lib/postgresql/data"]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sesen -d sesen"]
+      test: ["CMD-SHELL", "pg_isready -U nyutag -d nyutag"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -16,9 +16,9 @@ services:
   backend:
     build: ./backend
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sesen
-      SPRING_DATASOURCE_USERNAME: sesen
-      SPRING_DATASOURCE_PASSWORD: sesen
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/nyutag
+      SPRING_DATASOURCE_USERNAME: nyutag
+      SPRING_DATASOURCE_PASSWORD: nyutag
       SESEN_TELEGRAM_BOT_TOKEN: ${SESEN_TELEGRAM_BOT_TOKEN:-}
       SESEN_DEV_AUTH_ENABLED: "false"
       SESEN_CORS_ORIGINS: "http://localhost:5173"

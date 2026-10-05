@@ -20,13 +20,13 @@ Telegram Mini App для изучения бурятского языка. Ре�
 ## Архитектура
 
 ```
-sesen-mvp/
+nyutag-mvp/
 ├── docker-compose.yml          # PostgreSQL + Backend + Frontend
 ├── backend/                    # Spring Boot 3.5.6 / Java 25
-│   └── src/main/java/ru/sesen/
-│       ├── SesenApplication.java
+│   └── src/main/java/ru/nyutag/
+│       ├── NyutagApplication.java
 │       ├── common/             # Exceptions
-│       ├── config/             # SesenProperties, CorsConfig, FilterConfig
+│       ├── config/             # NyutagProperties, CorsConfig, FilterConfig
 │       ├── course/             # Course entity + repository
 │       ├── lesson/             # Lesson, LessonItem, LessonType + repositories
 │       ├── progress/           # UserLessonProgress, ProgressStatus + repository
@@ -61,7 +61,7 @@ sesen-mvp/
 ### Запуск через Docker Compose
 
 ```bash
-cd sesen-mvp
+cd nyutag-mvp
 docker compose up --build
 ```
 
@@ -77,7 +77,7 @@ docker compose up --build
 
 ```bash
 curl http://localhost:8080/api/health
-# {"status":"ok","app":"sesen"}
+# {"status":"ok","app":"nyutag"}
 ```
 
 ---
@@ -95,9 +95,9 @@ docker compose up postgres
 | Параметр | Значение |
 |----------|----------|
 | Образ | `postgres:17-alpine` |
-| База | `sesen` |
-| Пользователь | `sesen` |
-| Пароль | `sesen` |
+| База | `nyutag` |
+| Пользователь | `nyutag` |
+| Пароль | `nyutag` |
 
 ### Backend
 
@@ -136,7 +136,7 @@ cloudflared tunnel --url http://localhost:5173
 
 ```yaml
 # application.yml
-sesen:
+nyutag:
   dev-auth:
     enabled: true
     telegram-id: 123456789  # ваш Telegram ID
@@ -153,7 +153,7 @@ sesen:
 ### GET /api/health
 
 ```json
-{ "status": "ok", "app": "sesen" }
+{ "status": "ok", "app": "nyutag" }
 ```
 
 ### GET /api/me
@@ -445,9 +445,9 @@ CSS-переменные читаются из `window.Telegram.WebApp.themePara
 ```yaml
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/sesen}
-    username: ${SPRING_DATASOURCE_USERNAME:sesen}
-    password: ${SPRING_DATASOURCE_PASSWORD:sesen}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/nyutag}
+    username: ${SPRING_DATASOURCE_USERNAME:nyutag}
+    password: ${SPRING_DATASOURCE_PASSWORD:nyutag}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -455,7 +455,7 @@ spring:
   flyway:
     enabled: true
 
-sesen:
+nyutag:
   xp:
     correct-answer: 10
   lessons:
@@ -473,9 +473,9 @@ sesen:
 
 | Переменная | По умолчанию | Описание |
 |------------|-------------|-----------|
-| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/sesen` | URL PostgreSQL |
-| `SPRING_DATASOURCE_USERNAME` | `sesen` | Имя пользователя БД |
-| `SPRING_DATASOURCE_PASSWORD` | `sesen` | Пароль БД |
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/nyutag` | URL PostgreSQL |
+| `SPRING_DATASOURCE_USERNAME` | `nyutag` | Имя пользователя БД |
+| `SPRING_DATASOURCE_PASSWORD` | `nyutag` | Пароль БД |
 | `SESEN_TELEGRAM_BOT_TOKEN` | (пусто) | Токен бота для HMAC-валидации (только backend) |
 | `SESEN_DEV_AUTH_ENABLED` | `false` | Включить dev-авторизацию (выключить в production) |
 | `SESEN_DEV_TELEGRAM_ID` | `1` | ID dev-пользователя |
