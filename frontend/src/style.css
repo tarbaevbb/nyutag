@@ -87,7 +87,7 @@ button {
   cursor: pointer;
 }
 
-.hero button, .finishBtn, .submitBtn, .nextBtn {
+.hero button, .finishBtn, .submitBtn, .nextBtn, .lessonComplete button {
   width: 100%;
   padding: 15px;
   border-radius: 15px;
