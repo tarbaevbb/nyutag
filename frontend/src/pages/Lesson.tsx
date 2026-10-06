@@ -25,9 +25,9 @@ export default function Lesson() {
     return (
       <div className="lessonComplete">
         <h2>🎉 Урок завершён!</h2>
-        {result && (
+        {result ? (
           <div className="result">
-            <p>XP: +{result.xp - (result as any).prevXp}</p>
+            <p>XP: +{result.xpEarned}</p>
             <p>Streak: {result.streak} 🔥</p>
             {result.nextLessonId && (
               <button onClick={() => navigate(`/lesson/${result.nextLessonId}`)}>
@@ -35,6 +35,8 @@ export default function Lesson() {
               </button>
             )}
           </div>
+        ) : (
+          <p>Прогресс сохранён.</p>
         )}
         <button onClick={() => navigate('/lessons')}>К списку уроков</button>
       </div>
@@ -42,12 +44,12 @@ export default function Lesson() {
   }
 
   const handleAnswer = async (answer: any) => {
-    setAnswered(true);
     try {
       await submit(lessonId, currentItem.id, {
         ...answer,
         responseMs: 0,
       });
+      setAnswered(true);
     } catch {}
   };
 
@@ -59,6 +61,7 @@ export default function Lesson() {
   const handleFinish = async () => {
     try {
       await complete(lessonId);
+      setCurrentItemIndex(items.length);
     } catch {}
   };
 
@@ -70,14 +73,14 @@ export default function Lesson() {
       </div>
       <h1>{lesson.title}</h1>
       <QuizCard
+        key={currentItem.id}
         item={currentItem}
         onAnswer={handleAnswer}
-        onSubmitAnswer={handleAnswer}
         response={answered ? response : null}
-        onNext={answered ? handleNext : undefined}
+        onNext={handleNext}
         onComplete={handleFinish}
         isLast={currentItemIndex === items.length - 1}
-        submitting={submitting}
+        submitting={submitting || completing}
       />
     </div>
   );

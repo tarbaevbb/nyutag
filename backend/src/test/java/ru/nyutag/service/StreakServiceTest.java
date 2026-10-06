@@ -54,7 +54,7 @@ class StreakServiceTest {
     @Test
     void updateStreak_sameDay_noIncrement() {
         testUser.setStreak(3);
-        testUser.setLastActivityAt(Instant.now());
+        testUser.setLastActivityAt(LocalDate.now(ZoneId.of("UTC")).atTime(1, 0).atZone(ZoneId.of("UTC")).toInstant());
 
         when(userRepository.findById(1L)).thenReturn(java.util.Optional.of(testUser));
 

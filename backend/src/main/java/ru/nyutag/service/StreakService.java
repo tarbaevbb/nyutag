@@ -59,7 +59,12 @@ public class StreakService {
         LocalDate lastActivityDate = user.getLastActivityAt().atZone(ZoneId.of("UTC")).toLocalDate();
 
         if (lastActivityDate.isEqual(today)) {
-            // Already active today, do not increment streak
+            // Already active today, do not increment streak. But if activity was recorded
+            // earlier today without ever starting a streak (e.g. answering before the
+            // first completion), make sure the streak is at least 1.
+            if (user.getStreak() < 1) {
+                user.setStreak(1);
+            }
             user.setLastActivityAt(now);
             user.setUpdatedAt(Instant.now());
             userRepository.save(user);

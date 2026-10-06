@@ -15,6 +15,8 @@ import ru.nyutag.lesson.LessonItem;
 import ru.nyutag.lesson.LessonItemRepository;
 import ru.nyutag.quiz.Answer;
 import ru.nyutag.quiz.AnswerRepository;
+import ru.nyutag.user.User;
+import ru.nyutag.user.UserRepository;
 
 import java.util.Map;
 import java.util.Optional;
@@ -34,12 +36,16 @@ class QuizServiceTest {
     private AnswerRepository answerRepository;
 
     @Mock
+    private UserRepository userRepository;
+
+    @Mock
     private NyutagProperties nyutagProperties;
 
     @InjectMocks
     private QuizService quizService;
 
     private LessonItem testItem;
+    private User testUser;
 
     @BeforeEach
     void setUp() {
@@ -52,13 +58,19 @@ class QuizServiceTest {
         testItem.setCorrectAnswerText("Correct answer");
         testItem.setExplanation("This is the explanation");
 
-        NyutagProperties.Xp xp = new NyutagProperties().getXp();
-        when(nyutagProperties.getXp()).thenReturn(xp);
+        testUser = new User();
+        testUser.setId(1L);
+        testUser.setXp(0);
+
+        NyutagProperties props = new NyutagProperties();
+        when(nyutagProperties.getXp()).thenReturn(props.getXp());
     }
 
     @Test
-    void submitAnswer_correct() {
+    void submitAnswer_correct_awardsXpAndPersists() {
         when(lessonItems.findById(anyLong())).thenReturn(Optional.of(testItem));
+        when(answerRepository.existsByUserIdAndLessonItemIdAndCorrectTrue(anyLong(), anyLong())).thenReturn(false);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
 
         Map<String, Object> result = quizService.submitAnswer(1L, 1L, Map.of("selectedOptionIndex", 1));
 
@@ -66,20 +78,43 @@ class QuizServiceTest {
         assertEquals(1, result.get("correctOptionIndex"));
         assertEquals("Correct answer", result.get("correctAnswerText"));
         assertEquals("This is the explanation", result.get("explanation"));
-        int expectedXp = nyutagProperties.getXp().getCorrectAnswer();
-        assertEquals(expectedXp, result.get("xpAwarded"));
+        assertEquals(10, result.get("xpAwarded"));
+        assertEquals(10, testUser.getXp());
         verify(answerRepository).save(any(Answer.class));
+        verify(userRepository).save(testUser);
     }
 
     @Test
-    void submitAnswer_incorrect() {
+    void submitAnswer_correct_secondTime_noXp() {
+        when(lessonItems.findById(anyLong())).thenReturn(Optional.of(testItem));
+        when(answerRepository.existsByUserIdAndLessonItemIdAndCorrectTrue(anyLong(), anyLong())).thenReturn(true);
+
+        Map<String, Object> result = quizService.submitAnswer(1L, 1L, Map.of("selectedOptionIndex", 1));
+
+        assertTrue((Boolean) result.get("correct"));
+        assertEquals(0, result.get("xpAwarded"));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void submitAnswer_incorrect_noXp() {
         when(lessonItems.findById(anyLong())).thenReturn(Optional.of(testItem));
 
         Map<String, Object> result = quizService.submitAnswer(1L, 1L, Map.of("selectedOptionIndex", 0));
 
         assertFalse((Boolean) result.get("correct"));
         assertEquals(0, result.get("xpAwarded"));
+        verify(userRepository, never()).save(any(User.class));
         verify(answerRepository).save(any(Answer.class));
+    }
+
+    @Test
+    void submitAnswer_responseMsMissing_doesNotThrow() {
+        when(lessonItems.findById(anyLong())).thenReturn(Optional.of(testItem));
+        when(answerRepository.existsByUserIdAndLessonItemIdAndCorrectTrue(anyLong(), anyLong())).thenReturn(false);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+
+        assertDoesNotThrow(() -> quizService.submitAnswer(1L, 1L, Map.of("selectedOptionIndex", 1)));
     }
 
     @Test

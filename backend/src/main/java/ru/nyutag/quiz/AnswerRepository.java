@@ -9,4 +9,5 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
     List<Answer> findByUserId(Long userId);
     long countByUserIdAndCorrectTrue(Long userId);
     long countByUserId(Long userId);
+    boolean existsByUserIdAndLessonItemIdAndCorrectTrue(Long userId, Long lessonItemId);
 }

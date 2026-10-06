@@ -171,9 +171,12 @@ nyutag:
   "xp": 150,
   "streak": 3,
   "currentLesson": 5,
-  "progressPercent": 40
+  "progressPercent": 40,
+  "isNewUser": false
 }
 ```
+
+`isNewUser` — `true`, если у пользователя нет ни одной записи прогресса и `last_activity_at == null`. Фронт использует его для редиректа `/` → `/onboarding`. Не полагаться на `xp > 0`.
 
 ### GET /api/lessons
 
@@ -189,6 +192,8 @@ nyutag:
 ```
 
 Статусы: `LOCKED`, `AVAILABLE`, `IN_PROGRESS`, `COMPLETED`.
+
+Правило доступности: урок с `orderIndex == 1` всегда `AVAILABLE` для нового пользователя без записи прогресса. Следующий урок становится `AVAILABLE` после `COMPLETED` предыдущего. Остальные — `LOCKED`. Та же проверка применяется к `GET /lessons/{id}`, `POST /start`, `POST /answer` и `POST /complete` (LOCKED → 403).
 
 ### GET /api/lessons/{id}
 
@@ -230,13 +235,16 @@ nyutag:
 }
 ```
 
+`xpAwarded` начисляется в `user.xp` только за **первый правильный ответ** на конкретный item (идемпотентность; повторные ответы дают 0 XP). Типы `PHRASE`/`WORD` — пассивное изучение, ответ не отправляется.
+
 ### POST /api/lessons/{id}/complete
 
-Завершение урока. Награждает XP, обновляет streak, разблокирует следующий урок.
+Завершение урока. Награждает XP, обновляет streak, разблокирует следующий урок. Идемпотентно: повторный вызов не начисляет XP и streak ещё раз.
 
 ```json
 {
   "xp": 170,
+  "xpEarned": 20,
   "streak": 4,
   "nextLessonId": 3,
   "lessonCompleted": true
@@ -424,6 +432,7 @@ frontend/
 | `/lessons` | Lessons — список всех уроков |
 | `/lesson/:id` | Lesson — прохождение урока |
 | `/profile` | Profile — XP, streak, статистика |
+| `/onboarding` | Onboarding — первый запуск (редирект с `/` при `isNewUser`) |
 
 ### Telegram тема
 
@@ -463,12 +472,12 @@ nyutag:
   course-code: BURYAT_A1
   auth-max-age-seconds: 86400
   dev-auth:
-    enabled: ${SESEN_DEV_AUTH_ENABLED:false}
-    telegram-id: ${SESEN_DEV_TELEGRAM_ID:1}
+    enabled: ${NYUTAG_DEV_AUTH_ENABLED:false}
+    telegram-id: ${NYUTAG_DEV_TELEGRAM_ID:1}
   telegram:
-    bot-token: ${SESEN_TELEGRAM_BOT_TOKEN:}
+    bot-token: ${NYUTAG_TELEGRAM_BOT_TOKEN:}
   cors:
-    allowed-origins: ${SESEN_CORS_ORIGINS:http://localhost:5173}
+    allowed-origins: ${NYUTAG_CORS_ORIGINS:http://localhost:5173}
 ```
 
 | Переменная | По умолчанию | Описание |
@@ -476,19 +485,19 @@ nyutag:
 | `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/nyutag` | URL PostgreSQL |
 | `SPRING_DATASOURCE_USERNAME` | `nyutag` | Имя пользователя БД |
 | `SPRING_DATASOURCE_PASSWORD` | `nyutag` | Пароль БД |
-| `SESEN_TELEGRAM_BOT_TOKEN` | (пусто) | Токен бота для HMAC-валидации (только backend) |
-| `SESEN_DEV_AUTH_ENABLED` | `false` | Включить dev-авторизацию (выключить в production) |
-| `SESEN_DEV_TELEGRAM_ID` | `1` | ID dev-пользователя |
-| `SESEN_CORS_ORIGINS` | `http://localhost:5173` | Разрешённые origins (без `*` в prod) |
+| `NYUTAG_TELEGRAM_BOT_TOKEN` | (пусто) | Токен бота для HMAC-валидации (только backend) |
+| `NYUTAG_DEV_AUTH_ENABLED` | `false` | Включить dev-авторизацию (выключить в production) |
+| `NYUTAG_DEV_TELEGRAM_ID` | `1` | ID dev-пользователя |
+| `NYUTAG_CORS_ORIGINS` | `http://localhost:5173` | Разрешённые origins (без `*` в prod) |
 
 ### Docker Compose
 
 ```yaml
 backend:
   environment:
-    SENSEN_TELEGRAM_BOT_TOKEN: ${SESEN_TELEGRAM_BOT_TOKEN:-}
-    SENSEN_DEV_AUTH_ENABLED: "false"
-    SENSEN_CORS_ORIGINS: "http://localhost:5173"
+    NYUTAG_TELEGRAM_BOT_TOKEN: ${NYUTAG_TELEGRAM_BOT_TOKEN:-}
+    NYUTAG_DEV_AUTH_ENABLED: "false"
+    NYUTAG_CORS_ORIGINS: "http://localhost:5173"
 ```
 
 ---
@@ -502,9 +511,11 @@ cd backend
 ./gradlew test
 ```
 
-- `StreakServiceTest` — логика streak (UTC день,.increment, reset, multiple lessons same day)
-- `QuizServiceTest` — правильный/неправильный ответ, отсутствие ответа, item не найден
-- `LessonControllerTest` — health endpoint, пустой список уроков
+- `StreakServiceTest` — логика streak (UTC день, increment, reset, multiple lessons same day)
+- `QuizServiceTest` — правильный/неправильный ответ, XP за первое попадание и идемпотентность, отсутствие ответа, item не найден
+- `LessonServiceTest` — доступность урока 1, блокировка/разблокировка, идемпотентность `completeLesson`
+- `TelegramInitDataValidatorTest` — валидная/невалидная подпись, просроченный `auth_date`, отсутствующий hash
+- `LessonControllerTest` — health, список уроков, null-safe `audioUrl`, недоступный урок, делегирование ответа
 
 ### Frontend
 
@@ -513,7 +524,7 @@ cd frontend
 npm test
 ```
 
-Vitest + Testing Library настроены.
+Vitest + Testing Library (jsdom) настроены (`vitest.config.ts`, `src/test/setup.ts`). Покрыты критичные потоки `QuizCard` (MC/TRANSLATION, неверный ответ → «Продолжить», PHRASE/WORD) и `Home` (редирект нового пользователя, «Продолжить»).
 
 ---
 
@@ -532,15 +543,14 @@ Vitest + Testing Library настроены.
 - [x] AudioButton (nullable audio_url)
 - [x] Skeleton, ErrorState, ResultFeedback
 - [x] Backend unit-тесты
+- [x] Frontend тесты (Vitest + Testing Library, jsdom)
 
 ### В планах
 
-- [ ] Реальные mp3 файлы в `frontend/public/audio/`
+- [ ] Реальные mp3 файлы в `frontend/public/audio/` (`audio_url` в seed = null)
 - [ ] Интеграционные тесты с Testcontainers PostgreSQL
-- [ ] Frontend тесты (Vitest + Testing Library)
 - [ ] Аудит и проверка seed контента носителем языка
 - [ ] Production deployment docs
-- [ ] CHANGELOG.md
 
 ---
 
@@ -552,4 +562,4 @@ Vitest + Testing Library настроены.
 | `401 Unauthorized` | Проверьте `X-Telegram-Init-Data` заголовок |
 | Frontend не видит API | Убедитесь, что vite proxy настроен на `localhost:8080` |
 | Telegram WebApp не работает | Убедитесь, что `telegram-web-app.js` загружен в `index.html` |
-| `SESEN_TELEGRAM_BOT_TOKEN` пуст | Без токена Telegram auth не работает (кроме dev auth) |
+| `NYUTAG_TELEGRAM_BOT_TOKEN` пуст | Без токена Telegram auth не работает (кроме dev auth) |

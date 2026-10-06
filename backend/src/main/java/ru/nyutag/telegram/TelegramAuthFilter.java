@@ -44,6 +44,9 @@ public class TelegramAuthFilter implements Filter {
             if (initData != null && !initData.isBlank()) {
                 user = telegramAuthService.authenticate(initData);
             } else if (properties.getDevAuth().isEnabled()) {
+                // LOCAL DEVELOPMENT ONLY. Enabled via nyutag.dev-auth.enabled (env
+                // NYUTAG_DEV_AUTH_ENABLED). Must stay disabled in production.
+                // Never logs initData or the bot token.
                 user = telegramAuthService.authenticateDev();
                 if (user == null) {
                     sendUnauthorized(httpResponse, "Dev auth is not enabled");

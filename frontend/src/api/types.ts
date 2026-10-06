@@ -9,6 +9,7 @@ export interface User {
   streak: number;
   currentLesson: number;
   progressPercent: number;
+  isNewUser?: boolean;
 }
 
 export interface Lesson {
@@ -42,6 +43,7 @@ export interface AnswerResponse {
 
 export interface CompleteResponse {
   xp: number;
+  xpEarned: number;
   streak: number;
   nextLessonId?: number;
   lessonCompleted: boolean;

@@ -1,7 +1,6 @@
 package ru.nyutag.web;
 
 import org.springframework.web.bind.annotation.*;
-import ru.nyutag.common.LessonUnavailableException;
 import ru.nyutag.common.NotFoundException;
 import ru.nyutag.lesson.Lesson;
 import ru.nyutag.lesson.LessonItem;
@@ -14,9 +13,9 @@ import ru.nyutag.service.TelegramAuthService;
 import ru.nyutag.user.User;
 import ru.nyutag.user.UserContext;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api")
@@ -51,24 +50,14 @@ public class LessonController {
     @GetMapping("/lessons")
     public List<Map<String, Object>> lessons() {
         User user = UserContext.get();
-        List<Lesson> allLessons = lessonService.findByCourseId(
-                lessonService.findByCourseId(Long.MIN_VALUE).stream()
-                        .findFirst()
-                        .map(Lesson::getCourseId)
-                        .orElse(null));
-        
-        return allLessons.stream().map(lesson -> {
-            UserLessonProgress progress = lessonService.getProgressForUserAndLesson(
-                    user.getId(), lesson.getId()).orElse(null);
-            
-            Map<String, Object> m = Map.of(
-                    "id", lesson.getId(),
-                    "title", lesson.getTitle(),
-                    "subtitle", lesson.getSubtitle(),
-                    "orderIndex", lesson.getOrderIndex(),
-                    "xpReward", lesson.getXpReward(),
-                    "status", progress != null ? progress.getStatus().toString() : "LOCKED"
-            );
+        return lessonService.getLessonsForUser(user.getId()).stream().map(lesson -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", lesson.getId());
+            m.put("title", lesson.getTitle());
+            m.put("subtitle", lesson.getSubtitle());
+            m.put("orderIndex", lesson.getOrderIndex());
+            m.put("xpReward", lesson.getXpReward());
+            m.put("status", lessonService.resolveStatus(user.getId(), lesson).toString());
             return m;
         }).toList();
     }
@@ -76,74 +65,30 @@ public class LessonController {
     @GetMapping("/lessons/{id}")
     public Map<String, Object> lesson(@PathVariable Long id) {
         User user = UserContext.get();
-        Lesson lesson = lessonService.findById(id)
-                .orElseThrow(() -> new NotFoundException("Lesson not found: " + id));
+        Lesson lesson = lessonService.requireLesson(id);
+        lessonService.assertLessonAvailable(user.getId(), lesson);
 
-        UserLessonProgress progress = lessonService.getProgressForUserAndLesson(
-                user.getId(), id).orElse(null);
+        List<Map<String, Object>> itemsDto = lessonService.findItemsByLessonId(id).stream()
+                .map(this::toItemDto)
+                .toList();
 
-        if (progress == null && lesson.getOrderIndex() > 1) {
-            Optional<UserLessonProgress> prevProgressOpt = lessonService.getProgressForUserAndLesson(
-                    user.getId(),
-                    lessonService.findById(id - 1).map(l -> l.getId()).orElse(null));
-            UserLessonProgress prevProgress = prevProgressOpt.orElse(null);
-            if (prevProgress == null || prevProgress.getStatus() != ru.nyutag.progress.ProgressStatus.COMPLETED) {
-                throw new LessonUnavailableException("Lesson not available yet");
-            }
-        }
-
-        List<LessonItem> items = lessonService.findItemsByLessonId(id);
-        
-        // Strip sensitive fields from items
-        List<Map<String, Object>> itemsDto = items.stream().map(item -> {
-            Map<String, Object> m = Map.of(
-                    "id", item.getId(),
-                    "orderIndex", item.getOrderIndex(),
-                    "type", item.getType().toString(),
-                    "prompt", item.getPrompt(),
-                    "promptTranslation", item.getPromptTranslation(),
-                    "buryat", item.getBuryat(),
-                    "russian", item.getRussian(),
-                    "audioUrl", item.getAudioUrl()
-            );
-            if (item.getOptions() != null) {
-                m.put("options", item.getOptions());
-            }
-            return m;
-        }).toList();
-
-        return Map.of(
-                "id", lesson.getId(),
-                "title", lesson.getTitle(),
-                "subtitle", lesson.getSubtitle(),
-                "items", itemsDto
-        );
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", lesson.getId());
+        result.put("title", lesson.getTitle());
+        result.put("subtitle", lesson.getSubtitle());
+        result.put("items", itemsDto);
+        return result;
     }
 
     @PostMapping("/lessons/{id}/start")
     public Map<String, Object> startLesson(@PathVariable Long id) {
         User user = UserContext.get();
         UserLessonProgress progress = lessonService.startLesson(user.getId(), id);
-        List<LessonItem> items = lessonService.findItemsByLessonId(id);
 
-        return Map.of(
-                "progress", Map.of("status", progress.getStatus().toString()),
-                "items", items.stream().map(item -> {
-                    Map<String, Object> m = Map.of(
-                            "id", item.getId(),
-                            "orderIndex", item.getOrderIndex(),
-                            "type", item.getType().toString(),
-                            "prompt", item.getPrompt(),
-                            "buryat", item.getBuryat(),
-                            "russian", item.getRussian(),
-                            "audioUrl", item.getAudioUrl()
-                    );
-                    if (item.getOptions() != null) {
-                        m.put("options", item.getOptions());
-                    }
-                    return m;
-                }).toList()
-        );
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("progress", Map.of("status", progress.getStatus().toString()));
+        result.put("items", lessonService.findItemsByLessonId(id).stream().map(this::toItemDto).toList());
+        return result;
     }
 
     @PostMapping("/lessons/{lessonId}/items/{itemId}/answer")
@@ -151,10 +96,11 @@ public class LessonController {
                                            @PathVariable Long itemId,
                                            @RequestBody Map<String, Object> answerPayload) {
         User user = UserContext.get();
-        
-        // Verify item belongs to lesson
+
         lessonService.findItemByIdAndLessonId(itemId, lessonId)
                 .orElseThrow(() -> new NotFoundException("Item not found in this lesson"));
+        Lesson lesson = lessonService.requireLesson(lessonId);
+        lessonService.assertLessonAvailable(user.getId(), lesson);
 
         return quizService.submitAnswer(user.getId(), itemId, answerPayload);
     }
@@ -162,31 +108,22 @@ public class LessonController {
     @PostMapping("/lessons/{id}/complete")
     public Map<String, Object> completeLesson(@PathVariable Long id) {
         User user = UserContext.get();
-        UserLessonProgress progress = lessonService.completeLesson(user.getId(), id);
-        
-        // Update streak
-        streakService.updateStreak(user.getId());
+        LessonService.LessonCompletionResult completion = lessonService.completeLesson(user.getId(), id);
 
-        // Get updated stats
+        // Update streak only on first completion
+        if (completion.firstCompletion()) {
+            streakService.updateStreak(user.getId());
+        }
+
         Map<String, Object> profile = telegramAuthService.getProfile(user.getId());
-        
-        // Get next lesson
-        Lesson nextLesson = lessonService.findByCourseId(
-                lessonService.findByCourseId(Long.MIN_VALUE).stream()
-                        .findFirst()
-                        .map(Lesson::getCourseId)
-                        .orElse(null))
-                .stream()
-                .filter(l -> l.getOrderIndex() == lessonService.findById(id).map(Lesson::getOrderIndex).get() + 1)
-                .findFirst()
-                .orElse(null);
 
-        return Map.of(
-                "xp", profile.get("xp"),
-                "streak", profile.get("streak"),
-                "nextLessonId", nextLesson != null ? nextLesson.getId() : null,
-                "lessonCompleted", true
-        );
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("xp", profile.get("xp"));
+        result.put("xpEarned", completion.xpEarned());
+        result.put("streak", profile.get("streak"));
+        result.put("nextLessonId", completion.nextLesson() != null ? completion.nextLesson().getId() : null);
+        result.put("lessonCompleted", true);
+        return result;
     }
 
     @GetMapping("/progress")
@@ -199,5 +136,25 @@ public class LessonController {
     public Map<String, Object> stats() {
         User user = UserContext.get();
         return streakService.getStats(user.getId());
+    }
+
+    /**
+     * Builds a null-safe item DTO. Uses a mutable map because several optional fields
+     * can legitimately be null for a given item type.
+     */
+    private Map<String, Object> toItemDto(LessonItem item) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", item.getId());
+        m.put("orderIndex", item.getOrderIndex());
+        m.put("type", item.getType().toString());
+        m.put("prompt", item.getPrompt());
+        m.put("promptTranslation", item.getPromptTranslation());
+        m.put("buryat", item.getBuryat());
+        m.put("russian", item.getRussian());
+        m.put("audioUrl", item.getAudioUrl());
+        if (item.getOptions() != null) {
+            m.put("options", item.getOptions());
+        }
+        return m;
     }
 }

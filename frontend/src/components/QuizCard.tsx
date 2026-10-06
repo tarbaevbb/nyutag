@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import AudioButton from './AudioButton';
 import ResultFeedback from './ResultFeedback';
-import ProgressBar from './ProgressBar';
+
+const PASSIVE_TYPES = ['PHRASE', 'WORD'];
 
 export default function QuizCard({ item, onAnswer, response, onNext, onComplete, isLast, submitting }: any) {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [selectedText, setSelectedText] = useState<string>('');
 
   const options = item.options ? JSON.parse(item.options) : [];
+  const isPassive = PASSIVE_TYPES.includes(item.type);
+  const isAnswered = response !== null;
 
   const handleSubmit = () => {
     if (item.type === 'MULTIPLE_CHOICE' && selectedOption !== null) {
@@ -17,12 +20,25 @@ export default function QuizCard({ item, onAnswer, response, onNext, onComplete,
     }
   };
 
-  const isAnswered = response !== null;
+  const handleContinue = () => {
+    if (isLast) {
+      onComplete();
+    } else {
+      onNext();
+    }
+  };
+
+  const canSubmit =
+    !isAnswered &&
+    ((item.type === 'MULTIPLE_CHOICE' && selectedOption !== null) ||
+      (item.type === 'TRANSLATION' && selectedText !== ''));
+
+  const showContinue = (isPassive && !isAnswered) || (isAnswered && response !== null);
 
   return (
     <div className="quizCard">
       {item.audioUrl && <AudioButton url={item.audioUrl} />}
-      
+
       {item.prompt && <div className="prompt">{item.prompt}</div>}
       {item.buryat && <div className="buryat">{item.buryat}</div>}
       {item.russian && <div className="russian">{item.russian}</div>}
@@ -66,21 +82,15 @@ export default function QuizCard({ item, onAnswer, response, onNext, onComplete,
         />
       )}
 
-      {!isAnswered && (selectedOption !== null || selectedText) && (
+      {canSubmit && (
         <button className="submitBtn" onClick={handleSubmit} disabled={submitting}>
           {submitting ? 'Отправка…' : 'Проверить'}
         </button>
       )}
 
-      {isAnswered && response?.correct && !isLast && (
-        <button className="nextBtn" onClick={onNext}>
-          Продолжить
-        </button>
-      )}
-
-      {isAnswered && isLast && (
-        <button className="finishBtn" onClick={onComplete}>
-          Завершить урок
+      {showContinue && (
+        <button className={isLast ? 'finishBtn' : 'nextBtn'} onClick={handleContinue} disabled={submitting}>
+          {isLast ? 'Завершить урок' : 'Продолжить'}
         </button>
       )}
     </div>
