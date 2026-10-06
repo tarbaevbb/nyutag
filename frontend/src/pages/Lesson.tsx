@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLesson, useSubmitAnswer, useCompleteLesson } from '../hooks/useApi';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import QuizCard from '../components/QuizCard';
 
 export default function Lesson() {
@@ -13,6 +13,11 @@ export default function Lesson() {
 
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
   const [answered, setAnswered] = useState(false);
+
+  useEffect(() => {
+    setCurrentItemIndex(0);
+    setAnswered(false);
+  }, [lessonId]);
 
   if (loading) return <div className="loading">Загрузка урока…</div>;
   if (error) return <div className="error">{error}</div>;
